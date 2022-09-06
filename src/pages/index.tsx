@@ -11,7 +11,7 @@ export async function getServerSideProps(context: GetServerSidePropsContext) {
   const date = new Date();
   const currentTime = new Intl.DateTimeFormat("sv-SE", {
     dateStyle: "short",
-    timeStyle: "short",
+    timeStyle: "medium",
   }).format(date);
   return {
     props: {
