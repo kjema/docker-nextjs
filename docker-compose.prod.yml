@@ -5,20 +5,15 @@ services:
     container_name: next-app
     build:
       context: .
-      dockerfile: prod.Dockerfile
-      args:
-        ENV_VARIABLE: ${ENV_VARIABLE}
-        NEXT_PUBLIC_ENV_VARIABLE: ${NEXT_PUBLIC_ENV_VARIABLE}
+      dockerfile: ./apps/docker-nextjs/prod-turbo.Dockerfile
     restart: always
     ports:
       - 3000:3000
     networks:
-      - my_network
-
-  # Add more containers below (nginx, postgres, etc.)
+      - app_network
 
 # Define a network, which allows containers to communicate
 # with each other, by using their container name as a hostname
 networks:
-  my_network:
+  app_network:
     external: true

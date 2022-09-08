@@ -1,5 +1,6 @@
 # Step 1. Rebuild the source code only when needed
 FROM node:18-alpine AS builder
+RUN apk update
 
 WORKDIR /app
 
