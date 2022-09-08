@@ -1,10 +1,13 @@
 # Step 1. Rebuild the source code only when needed
 FROM node:18-alpine AS builder
+RUN apk update
 
 WORKDIR /app
 
-COPY package.json ../../pnpm-lock.yaml* ./
-RUN npm i -g pnpm && pnpm i; 
+COPY package.json .
+COPY pnpm-lock.yaml .
+RUN npm i -g pnpm
+RUN pnpm install --frozen-lockfile
 
 COPY src ./src
 COPY public ./public
