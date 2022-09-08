@@ -1,18 +1,20 @@
-# Step 1. Rebuild the source code only when needed
-FROM node:18-alpine AS builder
+# Base node image
+FROM node:18-alpine AS base
 RUN apk update
+RUN npm install -g pnpm
 
-WORKDIR /app
+# Install all node_modules, including dev dependencies
+FROM base as deps
 
-COPY package.json .
-COPY pnpm-lock.yaml .
-RUN npm i -g pnpm
+WORKDIR /myapp
+
+ADD package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY src ./src
-COPY public ./public
-COPY next.config.js .
-COPY tsconfig.json .
+# Build the app
+FROM base as build
+
+WORKDIR /myapp
 
 # Environment variables must be present at build time
 # https://github.com/vercel/next.js/discussions/14030
@@ -24,24 +26,34 @@ ENV NEXT_PUBLIC_ENV_VARIABLE=${NEXT_PUBLIC_ENV_VARIABLE}
 # Uncomment the following line to disable telemetry at build time
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN pnpm build
+COPY --from=deps /myapp/node_modules ./node_modules
 
-# Step 2. Production image, copy all the files and run next
-FROM node:18-alpine AS runner
+ADD public ./public
+ADD src ./src
+ADD package.json next.config.js tsconfig.json ./
+RUN pnpm run build
 
-WORKDIR /app
+# Finally, build the production image with minimal footprint
+FROM node:18-alpine
+
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+# RUN apk add --no-cache libc6-compat
+
+WORKDIR /myapp
 
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 USER nextjs
 
-COPY --from=builder /app/public ./public
+# You only need to copy next.config.js if you are NOT using the default configuration
+COPY --from=build /myapp/next.config.js ./
+COPY --from=build /myapp/public ./public
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=build --chown=nextjs:nodejs /myapp/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /myapp/.next/static ./.next/static
 
 # Environment variables must be redefined at run time
 ARG ENV_VARIABLE
