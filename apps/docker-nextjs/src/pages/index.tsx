@@ -6,6 +6,7 @@ import type {
   NextPage,
 } from "next";
 import dynamic from "next/dynamic";
+import { Button } from "ui";
 
 const UserViewLazy = dynamic(
   () => import("@/features/user/user-view").then((c) => c.UserView),
@@ -37,6 +38,7 @@ const Home: NextPage<
         Time from server: <code className={s.code}>{currentTime}</code>
       </p>
       <UserViewLazy />
+      <Button />
     </Page>
   );
 };
