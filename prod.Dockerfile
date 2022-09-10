@@ -1,14 +1,14 @@
 # Base node image
 FROM node:18-alpine AS base
 RUN apk update
-RUN npm install -g pnpm
+RUN npm install -g pnpm@7.11.0
 
 # Install all node_modules, including dev dependencies
 FROM base as deps
 
 WORKDIR /myapp
 
-ADD package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Build the app
@@ -28,9 +28,9 @@ ENV NEXT_TELEMETRY_DISABLED 1
 
 COPY --from=deps /myapp/node_modules ./node_modules
 
-ADD public ./public
-ADD src ./src
-ADD package.json next.config.js tsconfig.json ./
+COPY public ./public
+COPY src ./src
+COPY package.json next.config.js tsconfig.json ./
 RUN pnpm run build
 
 # Finally, build the production image with minimal footprint
@@ -64,4 +64,4 @@ ENV NEXT_PUBLIC_ENV_VARIABLE=${NEXT_PUBLIC_ENV_VARIABLE}
 # Uncomment the following line to disable telemetry at run time
 ENV NEXT_TELEMETRY_DISABLED 1
 
-CMD node server.js
+CMD ["node", "server.js"]
