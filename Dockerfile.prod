@@ -1,0 +1,44 @@
+# Base image
+FROM node:16.18.0-bullseye-slim AS base
+
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init
+RUN npm install -g pnpm@7.13.6
+
+WORKDIR /usr/src/app
+
+COPY package.json pnpm-lock.yaml ./
+
+RUN pnpm install --frozen-lockfile
+
+# Build image
+FROM base as build
+
+WORKDIR /usr/src/app
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+COPY --from=base /usr/src/app/node_modules ./node_modules
+
+COPY public ./public
+COPY src ./src
+COPY package.json next.config.js tsconfig.json ./
+RUN pnpm run build
+
+# Production image
+FROM node:16.18.0-bullseye-slim
+
+COPY --from=build /usr/bin/dumb-init /usr/bin/dumb-init
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+USER node
+WORKDIR /usr/src/app
+
+COPY --chown=node:node --from=build /usr/src/app/next.config.js ./
+COPY --chown=node:node --from=build /usr/src/app/public ./public
+COPY --chown=node:node --from=build /usr/src/app/.next/standalone ./
+COPY --chown=node:node --from=build /usr/src/app/.next/static ./.next/static
+
+CMD ["dumb-init", "node", "server.js"]
